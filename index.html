@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>โน้ตเงิน — รายรับรายจ่าย</title>
+  <meta name="description" content="พิมพ์รายรับรายจ่ายภาษาไทยได้เลย แยกหมวดให้อัตโนมัติ สรุปรายวันและรายสัปดาห์ ข้อมูลเก็บในเครื่องนี้เท่านั้น">
+  <meta name="theme-color" content="#f3efe6">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="โน้ตเงิน">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-tab="today">
+  <header class="app-header">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="" width="36" height="36">
+      <div>
+        <h1>โน้ตเงิน</h1>
+        <p>พิมพ์ได้เลย แยกหมวดให้เอง</p>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="มุมมอง">
+      <button type="button" id="tab-today" class="on" data-tab="today" role="tab" aria-selected="true">วันนี้</button>
+      <button type="button" id="tab-week" data-tab="week" role="tab" aria-selected="false">สัปดาห์</button>
+    </nav>
+  </header>
+
+  <div id="demo-banner" class="demo-banner" hidden>
+    <div>
+      <strong>นี่คือข้อมูลตัวอย่าง</strong>
+      <div>ใช้ดูวิธีการทำงานเท่านั้น ยังไม่ได้บันทึกลงเครื่องของคุณ</div>
+    </div>
+    <button type="button" id="exit-demo">ปิดตัวอย่าง</button>
+  </div>
+
+  <main class="layout">
+    <section class="panel composer" aria-label="เพิ่มรายการ">
+      <label for="composer" class="section-title">วันนี้ซื้ออะไร หรือได้เงินอะไร</label>
+      <p class="hint">เช่น ข้าวมันไก่ 50 &nbsp;·&nbsp; กาแฟ 2 แก้ว แก้วละ 45 &nbsp;·&nbsp; เงินเดือน 25000</p>
+      <textarea id="composer" rows="3" placeholder="พิมพ์ที่นี่ รายการหลายอย่างคั่นด้วยจุลภาคหรือขึ้นบรรทัดใหม่ได้" autocomplete="off"></textarea>
+      <div id="preview" class="preview" hidden></div>
+      <button type="button" class="add-btn" id="add-btn" disabled>เพิ่มรายการ</button>
+    </section>
+
+    <section class="panel" id="today-panel" aria-labelledby="today-date">
+      <h2 class="section-title" id="today-date">วันนี้</h2>
+      <div class="totals">
+        <div class="total-box">
+          <span class="lbl">รายจ่าย</span>
+          <span class="num" id="today-spent">฿0</span>
+        </div>
+        <div class="total-box">
+          <span class="lbl">รายรับ</span>
+          <span class="num income" id="today-income">฿0</span>
+        </div>
+        <div class="total-box">
+          <span class="lbl">คงเหลือ</span>
+          <span class="num" id="today-net">฿0</span>
+        </div>
+      </div>
+      <div id="today-list"></div>
+    </section>
+
+    <section class="panel" id="week-panel" aria-labelledby="week-title">
+      <h2 class="section-title" id="week-title">7 วันล่าสุด</h2>
+      <p class="sub" id="week-range"></p>
+      <div class="totals">
+        <div class="total-box">
+          <span class="lbl">รายจ่าย</span>
+          <span class="num" id="week-spent">฿0</span>
+        </div>
+        <div class="total-box">
+          <span class="lbl">รายรับ</span>
+          <span class="num income" id="week-income">฿0</span>
+        </div>
+        <div class="total-box">
+          <span class="lbl">คงเหลือ</span>
+          <span class="num" id="week-net">฿0</span>
+        </div>
+      </div>
+      <h3>แยกตามหมวด</h3>
+      <div id="week-bars"></div>
+      <div id="week-advice"></div>
+      <div id="week-top"></div>
+      <div class="tools">
+        <button type="button" id="export-btn">ส่งออก CSV</button>
+        <button type="button" id="clear-btn" class="danger">ล้างข้อมูล</button>
+      </div>
+      <p class="fineprint">ข้อมูลเก็บในเครื่องนี้เท่านั้น ไม่ส่งไปเซิร์ฟเวอร์ ใช้ออฟไลน์ได้</p>
+    </section>
+  </main>
+
+  <div id="edit-modal" class="modal" hidden>
+    <button type="button" class="modal-backdrop" id="edit-cancel-bg" aria-label="ปิด"></button>
+    <div class="sheet" role="dialog" aria-labelledby="edit-title">
+      <h2 id="edit-title">แก้รายการ</h2>
+      <div class="field">
+        <label for="edit-name">ชื่อรายการ</label>
+        <input id="edit-name" type="text">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="edit-qty">จำนวน</label>
+          <input id="edit-qty" type="number" min="0" step="any">
+        </div>
+        <div class="field">
+          <label for="edit-unit">หน่วย</label>
+          <input id="edit-unit" type="text" placeholder="แก้ว, ขวด">
+        </div>
+        <div class="field">
+          <label for="edit-price">ราคาต่อหน่วย</label>
+          <input id="edit-price" type="number" min="0" step="any">
+        </div>
+      </div>
+      <div class="edit-total" id="edit-total">รวม ฿0</div>
+      <div class="field">
+        <label for="edit-type">ประเภท</label>
+        <select id="edit-type">
+          <option value="expense">รายจ่าย</option>
+          <option value="income">รายรับ</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>หมวด</label>
+        <div class="pick-grid" id="edit-cats"></div>
+      </div>
+      <div class="sheet-actions">
+        <button type="button" class="danger-btn" id="edit-delete">ลบ</button>
+        <button type="button" id="edit-cancel">ยกเลิก</button>
+        <button type="button" class="primary" id="edit-save">บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cat-modal" class="modal" hidden>
+    <button type="button" class="modal-backdrop" id="cat-cancel" aria-label="ปิด"></button>
+    <div class="sheet" role="dialog" aria-labelledby="cat-title">
+      <h2 id="cat-title">เลือกหมวด</h2>
+      <p class="sub">ครั้งถัดไป รายการชื่อเดียวกันจะถูกจัดหมวดนี้ให้อัตโนมัติ</p>
+      <div class="pick-grid" id="cat-choices"></div>
+    </div>
+  </div>
+
+  <script src="js/parser.js"></script>
+  <script src="js/categories.js"></script>
+  <script src="js/advice.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

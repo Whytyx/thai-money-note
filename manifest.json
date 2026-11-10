@@ -1,0 +1,31 @@
+{
+  "name": "โน้ตเงิน — รายรับรายจ่าย",
+  "short_name": "โน้ตเงิน",
+  "description": "พิมพ์รายรับรายจ่ายภาษาไทยได้เลย ข้อมูลเก็บในเครื่องนี้เท่านั้น",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f3efe6",
+  "theme_color": "#f3efe6",
+  "lang": "th",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
