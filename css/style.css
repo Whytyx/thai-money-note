@@ -149,6 +149,125 @@ p { margin: 0; }
   cursor: default;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.date-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+.date-bar-label {
+  font-size: 0.82rem;
+  color: var(--muted);
+  font-weight: 600;
+  width: 100%;
+}
+.date-chips {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+.date-chips button {
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  flex: 1;
+}
+.date-chips button.on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.date-input-wrap {
+  flex: 1 1 10rem;
+  min-width: 9.5rem;
+}
+.date-input-wrap input[type="date"] {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0 10px;
+  background: #fff;
+}
+.date-save-hint {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  min-height: 1.2em;
+}
+
+.day-nav {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.day-nav > button:not(.day-label) {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 12px;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink);
+}
+.day-nav > button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.day-label {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 12px;
+  min-height: 48px;
+}
+.day-label:hover, .day-label:focus {
+  background: #f7f3ec;
+}
+.day-label .sub { margin-bottom: 0; }
+
+.update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 40;
+  background: var(--accent);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-weight: 600;
+  box-shadow: 0 8px 24px rgba(28, 25, 22, 0.2);
+  max-width: calc(100% - 32px);
+  text-align: center;
+}
+.update-toast[hidden] { display: none !important; }
+
+.app-version { margin-top: 8px; }
+
 #tools-panel .tools { margin-top: 0; }
 #tools-panel { padding-top: 14px; padding-bottom: 14px; }
 

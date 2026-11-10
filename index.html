@@ -42,15 +42,34 @@
 
   <main class="layout">
     <section class="panel composer" aria-label="เพิ่มรายการ">
-      <label for="composer" class="section-title">วันนี้ซื้ออะไร หรือได้เงินอะไร</label>
-      <p class="hint">เช่น ข้าวมันไก่ 50 &nbsp;·&nbsp; กาแฟ 2 แก้ว แก้วละ 45 &nbsp;·&nbsp; เงินเดือน 25000</p>
+      <label for="composer" class="section-title" id="composer-title">ซื้ออะไร หรือได้เงินอะไร</label>
+      <p class="hint">เช่น ข้าวมันไก่ 50 &nbsp;·&nbsp; กาแฟ 2 แก้ว แก้วละ 45 &nbsp;·&nbsp; เมื่อวาน กาแฟ 45</p>
+      <div class="date-bar">
+        <span class="date-bar-label">วันที่บันทึก</span>
+        <div class="date-chips" role="group" aria-label="เลือกวันเร็ว">
+          <button type="button" id="chip-today" data-date-chip="0">วันนี้</button>
+          <button type="button" id="chip-yesterday" data-date-chip="1">เมื่อวาน</button>
+        </div>
+        <label class="date-input-wrap">
+          <span class="visually-hidden">เลือกวันที่</span>
+          <input type="date" id="entry-date" required>
+        </label>
+      </div>
       <textarea id="composer" rows="3" placeholder="พิมพ์ที่นี่ รายการหลายอย่างคั่นด้วยจุลภาคหรือขึ้นบรรทัดใหม่ได้" autocomplete="off"></textarea>
       <div id="preview" class="preview" hidden></div>
+      <p class="date-save-hint" id="date-save-hint"></p>
       <button type="button" class="add-btn" id="add-btn" disabled>เพิ่มรายการ</button>
     </section>
 
-    <section class="panel" id="today-panel" aria-labelledby="today-date">
-      <h2 class="section-title" id="today-date">วันนี้</h2>
+    <section class="panel" id="today-panel" aria-labelledby="day-title">
+      <div class="day-nav">
+        <button type="button" id="day-prev" aria-label="วันก่อนหน้า">‹</button>
+        <button type="button" id="day-label" class="day-label" title="เลือกวันที่">
+          <h2 class="section-title" id="day-title">วันนี้</h2>
+          <p class="sub" id="day-sub"></p>
+        </button>
+        <button type="button" id="day-next" aria-label="วันถัดไป">›</button>
+      </div>
       <div class="totals">
         <div class="total-box">
           <span class="lbl">รายจ่าย</span>
@@ -133,6 +152,7 @@
         <button type="button" id="clear-btn" class="danger">ล้างข้อมูล</button>
       </div>
       <p class="fineprint">ข้อมูลเก็บในเครื่องนี้เท่านั้น ไม่ส่งไปเซิร์ฟเวอร์ ใช้ออฟไลน์ได้<br>รายการเก่ากว่า 2 เดือนจะถูกลบอัตโนมัติ คงไว้เฉพาะเดือนนี้กับเดือนก่อน</p>
+      <p class="fineprint app-version" id="app-version">เวอร์ชัน 1.2.0</p>
     </div>
     </div>
   </main>
@@ -161,6 +181,10 @@
       </div>
       <div class="edit-total" id="edit-total">รวม ฿0</div>
       <div class="field">
+        <label for="edit-date">วันที่</label>
+        <input id="edit-date" type="date" required>
+      </div>
+      <div class="field">
         <label for="edit-type">ประเภท</label>
         <select id="edit-type">
           <option value="expense">รายจ่าย</option>
@@ -187,6 +211,8 @@
       <div class="pick-grid" id="cat-choices"></div>
     </div>
   </div>
+
+  <div id="update-toast" class="update-toast" hidden role="status">อัปเดตแอปแล้ว</div>
 
   <script src="js/parser.js"></script>
   <script src="js/categories.js"></script>

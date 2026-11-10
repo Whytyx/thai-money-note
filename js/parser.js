@@ -28,6 +28,12 @@
     "ค่าสอน", "ค่าจ้างพิเศษ", "เงินคืน", "ได้ค่า"
   ];
 
+  var DATE_HINTS = [
+    { word: "เมื่อวานซืน", daysAgo: 2 },
+    { word: "เมื่อวาน", daysAgo: 1 },
+    { word: "วันนี้", daysAgo: 0 }
+  ];
+
   var LEADING_VERBS = /^(ซื้อ|จ่าย|เติม|สั่ง|เอา|กิน|ทาน)\s*/;
   var CURRENCY_TAIL = /\s*(?:บาท|฿|บ\.)\s*$/;
   var NUM = "(\\d{1,3}(?:,\\d{3})+(?:\\.\\d+)?|\\d+(?:\\.\\d+)?)";
@@ -55,6 +61,35 @@
     return false;
   }
 
+  function extractDateHint(text) {
+    var t = String(text || "").trim();
+    if (!t) return { text: "", daysAgo: null };
+    for (var i = 0; i < DATE_HINTS.length; i++) {
+      var w = escapeRegExp(DATE_HINTS[i].word);
+      var lead = new RegExp("^" + w + "(?:\\s+|$)");
+      if (lead.test(t)) {
+        return { text: t.replace(lead, "").trim(), daysAgo: DATE_HINTS[i].daysAgo };
+      }
+      var tail = new RegExp("(?:^|\\s+)" + w + "\\s*$");
+      if (tail.test(t)) {
+        return { text: t.replace(tail, "").trim(), daysAgo: DATE_HINTS[i].daysAgo };
+      }
+    }
+    return { text: t, daysAgo: null };
+  }
+
+  function stripLeadingDateHint(text) {
+    var t = String(text || "").replace(/\r\n/g, "\n").trim();
+    for (var i = 0; i < DATE_HINTS.length; i++) {
+      var w = escapeRegExp(DATE_HINTS[i].word);
+      var lead = new RegExp("^" + w + "(?:\\s+|$)");
+      if (lead.test(t)) {
+        return { text: t.replace(lead, "").trim(), daysAgo: DATE_HINTS[i].daysAgo };
+      }
+    }
+    return { text: t, daysAgo: null };
+  }
+
   function splitItems(text) {
     var raw = String(text || "").replace(/\r\n/g, "\n");
     var lines = raw.split(/\n+/);
@@ -75,6 +110,7 @@
   function cleanName(name) {
     var n = String(name || "").trim();
     n = n.replace(/^\+\s*/, "");
+    n = extractDateHint(n).text;
     n = n.replace(LEADING_VERBS, "");
     n = n.replace(/\s*(?:บาท|฿|บ\.)\s*$/, "");
     n = n.replace(/[\s\-–—:]+$/g, "");
@@ -119,10 +155,17 @@
   }
 
   function parseOne(raw) {
-    var text = String(raw || "").trim();
+    var extracted = extractDateHint(String(raw || "").trim());
+    var text = extracted.text;
     if (!text) return null;
     text = text.replace(CURRENCY_TAIL, "").trim();
-    var typeHint = isIncomeText(text) ? "income" : "expense";
+    if (!text) return null;
+    var typeHint = isIncomeText(text) || isIncomeText(String(raw || "")) ? "income" : "expense";
+
+    function done(item) {
+      if (item) item.daysAgo = extracted.daysAgo;
+      return item;
+    }
 
     var reUnitPrice = new RegExp(
       "^(.+?)\\s+" + NUM + "\\s+(?:(" + UNIT_RE + ")\\s+)?(?:(" + UNIT_RE + ")|หน่วย)?ละ\\s*" + NUM + "\\s*$"
@@ -130,63 +173,58 @@
     var m = text.match(reUnitPrice);
     if (m) {
       var unitA = m[3] || m[4] || "";
-      return finishItem(raw, m[1], m[2], unitA, m[5], null, typeHint);
+      return done(finishItem(raw, m[1], m[2], unitA, m[5], null, typeHint));
     }
 
-    // "กาแฟ 2x45" / "กาแฟ 2 × 45" / "กาแฟ 2*45"
     var reTimes = new RegExp("^(.+?)\\s+" + NUM + "\\s*[x×*]\\s*" + NUM + "\\s*$", "i");
     m = text.match(reTimes);
     if (m) {
-      return finishItem(raw, m[1], m[2], "", m[3], null, typeHint);
+      return done(finishItem(raw, m[1], m[2], "", m[3], null, typeHint));
     }
 
-    // "เบอร์เกอร์ 2 ชิ้น รวม 199" / "เบอร์เกอร์ รวม 199"
     var reTotalWord = new RegExp(
       "^(.+?)(?:\\s+" + NUM + "\\s*(" + UNIT_RE + ")?)?\\s*(?:รวม|ทั้งหมด|เป็นเงิน|จ่าย)\\s*" + NUM + "\\s*$"
     );
     m = text.match(reTotalWord);
     if (m) {
-      var qty = m[2] || "1";
-      var unit = m[3] || "";
-      return finishItem(raw, m[1], qty, unit, null, m[4], typeHint);
+      return done(finishItem(raw, m[1], m[2] || "1", m[3] || "", null, m[4], typeHint));
     }
 
-    // "ซื้อน้ำ 3 ขวด 30" — last number is the amount paid (total)
     var reQtyUnitTotal = new RegExp(
       "^(.+?)\\s+" + NUM + "\\s+(" + UNIT_RE + ")\\s+" + NUM + "\\s*$"
     );
     m = text.match(reQtyUnitTotal);
     if (m) {
-      return finishItem(raw, m[1], m[2], m[3], null, m[4], typeHint);
+      return done(finishItem(raw, m[1], m[2], m[3], null, m[4], typeHint));
     }
 
-    // "กาแฟ 2 แก้ว" without a price — not enough
     var reQtyOnly = new RegExp("^(.+?)\\s+" + NUM + "\\s+(" + UNIT_RE + ")\\s*$");
     if (reQtyOnly.test(text)) return null;
 
-    // "ข้าวมันไก่ 50" / "เงินเดือน 25,000"
     var reNamePrice = new RegExp("^(.+?)\\s+" + NUM + "\\s*$");
     m = text.match(reNamePrice);
     if (m) {
-      return finishItem(raw, m[1], 1, "", m[2], m[2], typeHint);
+      return done(finishItem(raw, m[1], 1, "", m[2], m[2], typeHint));
     }
 
-    // "+3000" or "+ 3000"
     var rePlusOnly = new RegExp("^\\+\\s*" + NUM + "\\s*$");
     m = text.match(rePlusOnly);
     if (m) {
-      return finishItem(raw, "รายรับ", 1, "", m[1], m[1], "income");
+      return done(finishItem(raw, "รายรับ", 1, "", m[1], m[1], "income"));
     }
 
     return null;
   }
 
   function parseItems(text) {
-    var parts = splitItems(text);
+    var leading = stripLeadingDateHint(text);
+    var parts = splitItems(leading.text);
     var out = [];
     for (var i = 0; i < parts.length; i++) {
       var item = parseOne(parts[i]);
-      if (item) out.push(item);
+      if (!item) continue;
+      if (item.daysAgo == null && leading.daysAgo != null) item.daysAgo = leading.daysAgo;
+      out.push(item);
     }
     return out;
   }
@@ -194,9 +232,12 @@
   return {
     UNITS: UNITS,
     INCOME_KEYWORDS: INCOME_KEYWORDS,
+    DATE_HINTS: DATE_HINTS,
     parseNumber: parseNumber,
     parseItems: parseItems,
     parseOne: parseOne,
+    extractDateHint: extractDateHint,
+    stripLeadingDateHint: stripLeadingDateHint,
     splitItems: splitItems,
     isIncomeText: isIncomeText,
     cleanName: cleanName,

@@ -61,6 +61,26 @@
     });
   }
 
+  function addDays(ymd, delta) {
+    if (!isYmd(ymd)) return ymd;
+    var p = ymd.split("-").map(Number);
+    var d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + (delta || 0)));
+    return ymdFromUtc(d);
+  }
+
+  function isDateAllowed(ymd, todayYmd) {
+    if (!isYmd(ymd) || !isYmd(todayYmd)) return false;
+    return ymd >= retentionCutoff(todayYmd) && ymd <= todayYmd;
+  }
+
+  function clampDate(ymd, todayYmd) {
+    if (!isYmd(todayYmd)) return ymd;
+    var cutoff = retentionCutoff(todayYmd);
+    if (!isYmd(ymd) || ymd < cutoff) return cutoff;
+    if (ymd > todayYmd) return todayYmd;
+    return ymd;
+  }
+
   function last7Dates(todayYmd) {
     var dates = [];
     var p = todayYmd.split("-").map(Number);
@@ -224,6 +244,9 @@
     shiftMonthKey: shiftMonthKey,
     retentionCutoff: retentionCutoff,
     pruneOlderThan: pruneOlderThan,
+    addDays: addDays,
+    isDateAllowed: isDateAllowed,
+    clampDate: clampDate,
     last7Dates: last7Dates,
     summarize: summarize,
     summarizeMonth: summarizeMonth,

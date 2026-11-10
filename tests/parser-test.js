@@ -201,6 +201,34 @@ var joined = monthAdvice.join(" | ");
 check("monthly advice mentions bills as essential", /บิล/.test(joined) && /จำเป็น/.test(joined), joined);
 check("monthly advice offers cutting drinks", /เครื่องดื่ม/.test(joined), joined);
 
+check("เมื่อวาน ข้าวมันไก่ 50 strips word and sets daysAgo 1", (function () {
+  var got = parser.parseItems("เมื่อวาน ข้าวมันไก่ 50");
+  return got.length === 1 && got[0].name === "ข้าวมันไก่" && got[0].total === 50 && got[0].daysAgo === 1;
+})());
+check("ข้าวมันไก่ 50 เมื่อวาน trailing hint", (function () {
+  var got = parser.parseItems("ข้าวมันไก่ 50 เมื่อวาน");
+  return got.length === 1 && got[0].name === "ข้าวมันไก่" && got[0].daysAgo === 1;
+})());
+check("เมื่อวานซืน is 2 days, not confused with เมื่อวาน", (function () {
+  var got = parser.parseItems("เมื่อวานซืน กาแฟ 2 แก้ว แก้วละ 45");
+  return got.length === 1 && got[0].name === "กาแฟ" && got[0].total === 90 && got[0].daysAgo === 2;
+})());
+check("เมื่อวาน applies to every item after a leading hint", (function () {
+  var got = parser.parseItems("เมื่อวาน กาแฟ 45, ขนมปัง 25");
+  return got.length === 2 && got[0].daysAgo === 1 && got[1].daysAgo === 1 && got[0].name === "กาแฟ" && got[1].name === "ขนมปัง";
+})());
+check("วันนี้ hint is daysAgo 0 and still income", (function () {
+  var got = parser.parseItems("วันนี้ เงินเดือน 25000");
+  return got.length === 1 && got[0].daysAgo === 0 && got[0].type === "income" && got[0].total === 25000;
+})());
+check("plain phrase has no daysAgo", parser.parseItems("ข้าวมันไก่ 50")[0].daysAgo == null);
+
+check("addDays yesterday", advice.addDays("2026-11-10", -1) === "2026-11-09");
+check("addDays month wrap", advice.addDays("2026-11-01", -1) === "2026-10-31");
+check("clampDate blocks future", advice.clampDate("2026-11-11", "2026-11-10") === "2026-11-10");
+check("clampDate blocks older than cutoff", advice.clampDate("2026-09-30", "2026-11-10") === "2026-10-01");
+check("isDateAllowed today ok, tomorrow no, Sept no", advice.isDateAllowed("2026-11-10", "2026-11-10") && !advice.isDateAllowed("2026-11-11", "2026-11-10") && !advice.isDateAllowed("2026-09-30", "2026-11-10"));
+
 console.log("\n" + extra.join("\n"));
-console.log("\n" + passed + " passed, " + failed + " failed (including month/retention)");
+console.log("\n" + passed + " passed, " + failed + " failed (including month/retention/dates)");
 process.exit(failed ? 1 : 0);

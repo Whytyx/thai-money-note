@@ -4,6 +4,7 @@
 
   var STORAGE_ENTRIES = "thai-money-note:v1:entries";
   var STORAGE_OVERRIDES = "thai-money-note:v1:overrides";
+  var APP_VERSION = "1.2.0";
 
   var state = {
     demo: false,
@@ -13,7 +14,8 @@
     preview: [],
     editingId: null,
     categoryFor: null,
-    monthOffset: 0
+    monthOffset: 0,
+    viewDate: null
   };
 
   function $(id) { return document.getElementById(id); }
@@ -190,9 +192,90 @@
   }
 
   function todayEntries() {
-    var today = bangkokToday();
-    return state.entries.filter(function (e) { return e.date === today; })
+    var day = state.viewDate || bangkokToday();
+    return state.entries.filter(function (e) { return e.date === day; })
       .slice().reverse();
+  }
+
+  function dayTitle(ymd) {
+    var today = bangkokToday();
+    if (ymd === today) return "วันนี้";
+    if (ymd === MoneyNoteAdvice.addDays(today, -1)) return "เมื่อวาน";
+    if (ymd === MoneyNoteAdvice.addDays(today, -2)) return "เมื่อวานซืน";
+    return thaiDate(ymd, false);
+  }
+
+  function setViewDate(ymd, opts) {
+    opts = opts || {};
+    var today = bangkokToday();
+    state.viewDate = MoneyNoteAdvice.clampDate(ymd, today);
+    syncDateUI();
+    if (!opts.silent) {
+      renderToday();
+      renderPreview();
+    }
+  }
+
+  function shiftDay(dir) {
+    setViewDate(MoneyNoteAdvice.addDays(state.viewDate || bangkokToday(), dir));
+  }
+
+  function syncDateUI() {
+    var today = bangkokToday();
+    var day = state.viewDate || today;
+    var cutoff = MoneyNoteAdvice.retentionCutoff(today);
+    var dateInput = $("entry-date");
+    if (dateInput) {
+      dateInput.min = cutoff;
+      dateInput.max = today;
+      dateInput.value = day;
+    }
+    var editDate = $("edit-date");
+    if (editDate) {
+      editDate.min = cutoff;
+      editDate.max = today;
+    }
+    var chip0 = $("chip-today");
+    var chip1 = $("chip-yesterday");
+    if (chip0) chip0.classList.toggle("on", day === today);
+    if (chip1) chip1.classList.toggle("on", day === MoneyNoteAdvice.addDays(today, -1));
+    if ($("day-title")) $("day-title").textContent = dayTitle(day);
+    if ($("day-sub")) $("day-sub").textContent = thaiDate(day, true);
+    if ($("day-prev")) $("day-prev").disabled = day <= cutoff;
+    if ($("day-next")) $("day-next").disabled = day >= today;
+    if ($("composer-title")) {
+      $("composer-title").textContent = (day === today ? "ซื้ออะไร หรือได้เงินอะไร" : "ซื้ออะไร " + dayTitle(day));
+    }
+    updateDateHint();
+  }
+
+  function updateDateHint() {
+    var el = $("date-save-hint");
+    if (!el) return;
+    var today = bangkokToday();
+    var hinted = null;
+    for (var i = 0; i < state.preview.length; i++) {
+      if (state.preview[i].daysAgo != null) {
+        hinted = MoneyNoteAdvice.clampDate(MoneyNoteAdvice.addDays(today, -state.preview[i].daysAgo), today);
+        break;
+      }
+    }
+    var target = hinted || state.viewDate || today;
+    if (target === today && !hinted) {
+      el.textContent = "";
+      return;
+    }
+    el.textContent = "จะบันทึกเป็น" + dayTitle(target) + " · " + thaiDate(target, false);
+  }
+
+  function openDatePicker() {
+    var input = $("entry-date");
+    if (!input) return;
+    if (typeof input.showPicker === "function") {
+      try { input.showPicker(); return; } catch (err) {}
+    }
+    input.focus();
+    input.click();
   }
 
   function renderPreview() {
@@ -203,10 +286,12 @@
       box.hidden = true;
       box.innerHTML = "";
       btn.disabled = true;
+      updateDateHint();
       return;
     }
     box.hidden = false;
     btn.disabled = false;
+    updateDateHint();
     box.innerHTML = items.map(function (it, i) {
       var cat = MoneyNoteCategories.getCategory(MoneyNoteCategories.assignCategory(it, state.overrides));
       var qtyLine = it.qty !== 1 || it.unit
@@ -236,11 +321,15 @@
     $("today-income").textContent = baht(income);
     $("today-net").textContent = baht(income - spent);
     $("today-net").className = "num " + (income - spent >= 0 ? "income" : "net-neg");
-    $("today-date").textContent = "วันนี้ · " + thaiDate(bangkokToday(), true);
+    syncDateUI();
 
     var hold = $("today-list");
+    var day = state.viewDate || bangkokToday();
     if (!list.length) {
-      hold.innerHTML = '<p class="empty" id="today-empty">ยังไม่มีรายการวันนี้ พิมพ์ด้านบนแล้วกดเพิ่มได้เลย</p>';
+      var empty = day === bangkokToday()
+        ? "ยังไม่มีรายการวันนี้ พิมพ์ด้านบนแล้วกดเพิ่มได้เลย"
+        : "ยังไม่มีรายการ" + dayTitle(day) + " พิมพ์ด้านบนแล้วกดเพิ่มได้เลย";
+      hold.innerHTML = '<p class="empty" id="today-empty">' + empty + "</p>";
       return;
     }
     hold.innerHTML = list.map(function (e) {
@@ -395,12 +484,19 @@
     updatePreviewFromInput();
     if (!state.preview.length) return;
     var today = bangkokToday();
+    var firstDate = null;
     state.preview.forEach(function (p) {
-      state.entries.push(parsedToEntry(p, today));
+      var date = state.viewDate || today;
+      if (p.daysAgo != null) {
+        date = MoneyNoteAdvice.clampDate(MoneyNoteAdvice.addDays(today, -p.daysAgo), today);
+      }
+      if (!firstDate) firstDate = date;
+      state.entries.push(parsedToEntry(p, date));
     });
     saveEntries();
     $("composer").value = "";
     state.preview = [];
+    if (firstDate && firstDate !== state.viewDate) state.viewDate = firstDate;
     render();
     $("composer").focus();
   }
@@ -429,6 +525,10 @@
     $("edit-unit").value = e.unit || "";
     $("edit-price").value = e.unitPrice;
     $("edit-type").value = e.type;
+    var today = bangkokToday();
+    $("edit-date").min = MoneyNoteAdvice.retentionCutoff(today);
+    $("edit-date").max = today;
+    $("edit-date").value = MoneyNoteAdvice.clampDate(e.date, today);
     renderEditCats(e.category);
     updateEditTotal();
     $("edit-modal").hidden = false;
@@ -472,6 +572,9 @@
     e.total = MoneyNoteParser.roundMoney(qty * price);
     e.type = $("edit-type").value;
     e.category = cat;
+    var newDate = MoneyNoteAdvice.clampDate($("edit-date").value, bangkokToday());
+    e.date = newDate;
+    state.viewDate = newDate;
     saveEntries();
     closeModal();
     render();
@@ -592,7 +695,7 @@
   }
 
   function onClick(e) {
-    var t = e.target.closest("[data-edit],[data-del],[data-cat-for],[data-pick],[data-set-cat],[data-tab],button,a");
+    var t = e.target.closest("[data-edit],[data-del],[data-cat-for],[data-pick],[data-set-cat],[data-tab],[data-date-chip],button,a");
     if (!t) return;
     if (t.id === "add-btn") { addFromComposer(); return; }
     if (t.id === "export-btn") { exportCsv(); return; }
@@ -608,6 +711,13 @@
     }
     if (t.id === "month-prev") { shiftMonth(1); return; }
     if (t.id === "month-next") { shiftMonth(-1); return; }
+    if (t.id === "day-prev") { shiftDay(-1); return; }
+    if (t.id === "day-next") { shiftDay(1); return; }
+    if (t.id === "day-label") { openDatePicker(); return; }
+    if (t.getAttribute("data-date-chip") != null) {
+      setViewDate(MoneyNoteAdvice.addDays(bangkokToday(), -Number(t.getAttribute("data-date-chip"))));
+      return;
+    }
     if (t.getAttribute("data-tab")) { setTab(t.getAttribute("data-tab")); return; }
     if (t.getAttribute("data-edit")) { openEditor(t.getAttribute("data-edit")); return; }
     if (t.getAttribute("data-del")) { deleteEntry(t.getAttribute("data-del")); return; }
@@ -631,6 +741,10 @@
     } else {
       state.entries = pruned;
     }
+    var startDate = today;
+    if (params.get("date")) startDate = MoneyNoteAdvice.clampDate(params.get("date"), today);
+    else if (params.get("day") === "yesterday") startDate = MoneyNoteAdvice.addDays(today, -1);
+    state.viewDate = MoneyNoteAdvice.clampDate(startDate, today);
     if (params.get("tab") === "week") setTab("week");
     else if (params.get("tab") === "month") setTab("month");
     else setTab("today");
@@ -644,16 +758,52 @@
     });
     $("edit-qty").addEventListener("input", updateEditTotal);
     $("edit-price").addEventListener("input", updateEditTotal);
+    $("entry-date").addEventListener("change", function () {
+      setViewDate($("entry-date").value);
+    });
     document.addEventListener("click", onClick);
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") closeModal();
     });
 
+    if ($("app-version")) $("app-version").textContent = "เวอร์ชัน " + APP_VERSION;
+    setupPwaUpdates();
     render();
+  }
 
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("sw.js").catch(function () {});
-    }
+  function showUpdateToast() {
+    var el = $("update-toast");
+    if (!el) return;
+    el.textContent = "อัปเดตแอปแล้ว · เวอร์ชัน " + APP_VERSION;
+    el.hidden = false;
+    setTimeout(function () { el.hidden = true; }, 4500);
+  }
+
+  /* Never reads or writes entry/override keys in localStorage. */
+  function setupPwaUpdates() {
+    try {
+      if (sessionStorage.getItem("thai-money-note:just-updated")) {
+        sessionStorage.removeItem("thai-money-note:just-updated");
+        showUpdateToast();
+      }
+    } catch (err) {}
+    if (!("serviceWorker" in navigator)) return;
+    var hadController = !!navigator.serviceWorker.controller;
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!hadController) return;
+      if (refreshing) return;
+      refreshing = true;
+      try { sessionStorage.setItem("thai-money-note:just-updated", "1"); } catch (err) {}
+      location.reload();
+    });
+    navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(function (reg) {
+      function check() { reg.update().catch(function () {}); }
+      check();
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") check();
+      });
+    }).catch(function () {});
   }
 
   if (document.readyState === "loading") {
