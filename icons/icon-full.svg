@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A735E"/>
+      <stop offset="1" stop-color="#174538"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#FFFEFB"/>
+      <stop offset="0.7" stop-color="#F7F1E7"/>
+      <stop offset="1" stop-color="#EFE6D8"/>
+    </linearGradient>
+    <linearGradient id="spine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#C9B89A"/>
+      <stop offset="0.35" stop-color="#E2D3BB"/>
+      <stop offset="1" stop-color="#D4C3A8"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#D7C8B0"/>
+      <stop offset="1" stop-color="#C4B394"/>
+    </linearGradient>
+    <radialGradient id="coin" cx="0.34" cy="0.30" r="0.78">
+      <stop offset="0" stop-color="#F9E9B0"/>
+      <stop offset="0.45" stop-color="#E8C25A"/>
+      <stop offset="1" stop-color="#B88620"/>
+    </radialGradient>
+    <radialGradient id="coinInner" cx="0.38" cy="0.34" r="0.7">
+      <stop offset="0" stop-color="#F3DC8A"/>
+      <stop offset="1" stop-color="#D4A83A"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0A1F18" flood-opacity="0.32"/>
+    </filter>
+    <filter id="coinSh" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="3" dy="10" stdDeviation="9" flood-color="#0A1F18" flood-opacity="0.38"/>
+    </filter>
+    <clipPath id="roundSq">
+      <rect width="512" height="512" rx="114" ry="114"/>
+    </clipPath>
+  </defs>
+
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <g>
+    
+  <!-- notebook thickness (right + bottom faces) -->
+  <g filter="url(#soft)">
+    <path d="M356 118 L378 132 L378 430 Q378 454 356 454 L128 454 L128 430 Q150 430 150 406 L150 118 Z"
+          fill="url(#edge)"/>
+    <rect x="110" y="90" width="246" height="340" rx="28" ry="28" fill="url(#paper)"/>
+    <!-- spine -->
+    <path d="M110 118 C110 102 122 90 138 90 L148 90 L148 430 Q148 430 138 430 C122 430 110 418 110 402 Z"
+          fill="url(#spine)"/>
+    <path d="M147 90 L151 90 L151 430 L147 430 Z" fill="#C4B392" opacity="0.85"/>
+    <!-- stitch marks on spine -->
+    <g stroke="#A89474" stroke-width="2.2" stroke-linecap="round" opacity="0.7">
+      <line x1="129" y1="130" x2="129" y2="148"/>
+      <line x1="129" y1="188" x2="129" y2="206"/>
+      <line x1="129" y1="246" x2="129" y2="264"/>
+      <line x1="129" y1="304" x2="129" y2="322"/>
+      <line x1="129" y1="362" x2="129" y2="380"/>
+    </g>
+    <!-- ruled lines -->
+    <g stroke="#D3C6B2" stroke-width="5.5" stroke-linecap="round" fill="none">
+      <line x1="176" y1="168" x2="328" y2="168"/>
+      <line x1="176" y1="210" x2="328" y2="210"/>
+      <line x1="176" y1="252" x2="300" y2="252"/>
+    </g>
+    <!-- bookmark ribbon -->
+    <path d="M300 90 L332 90 L332 148 L316 136 L300 148 Z" fill="#E8C25A"/>
+    <path d="M300 90 L332 90 L332 104 L300 104 Z" fill="#F3DC8A"/>
+  </g>
+
+  <!-- coin -->
+  <g filter="url(#coinSh)">
+    <circle cx="350" cy="348" r="118" fill="url(#coin)"/>
+  </g>
+  <circle cx="350" cy="348" r="108" fill="none" stroke="#F6E7B0" stroke-width="5" opacity="0.85"/>
+  <circle cx="350" cy="348" r="97" fill="none" stroke="#C49228" stroke-width="2.4" opacity="0.45"/>
+  <!-- highlight -->
+  <ellipse cx="316" cy="314" rx="38" ry="22" fill="#FFF6D4" opacity="0.45"/>
+  <path d="M351 0V-79H241V0H68V700H241V769H351V697Q445 687 493.5 643.5Q542 600 542 525Q542 475 519.0 439.0Q496 403 447 378V375Q511 351 539.5 311.0Q568 271 568 206Q568 109 512.5 56.0Q457 3 351 0ZM212 421H308Q350 421 373.5 444.5Q397 468 397 510Q397 551 370.5 570.0Q344 589 289 589H212ZM426 215Q426 268 395.0 292.0Q364 316 295 316H212V111H328Q375 111 400.5 138.0Q426 165 426 215Z" transform="translate(350,351) scale(0.161415,-0.161415) translate(-318.0,-345.0)" fill="#1F5C4A"/>
+
+  </g>
+</svg>

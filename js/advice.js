@@ -1,4 +1,4 @@
-/* โน้ตเงิน — weekly totals + plain-Thai rule-based advice from the user's own data */
+/* โน้ตเงิน — weekly/monthly totals + plain-Thai rule-based advice from the user's own data */
 (function (root, factory) {
   var api = factory(root);
   if (typeof module !== "undefined" && module.exports) {
@@ -18,38 +18,77 @@
     return sign + "฿" + parts.join(".");
   }
 
+  function pad2(n) {
+    return String(n).padStart(2, "0");
+  }
+
+  function ymdFromUtc(d) {
+    return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
+  }
+
+  /* monthOffset 0 = month of today, 1 = previous calendar month. day is clamped to that month. */
+  function dateInMonth(todayYmd, monthOffset, day) {
+    var p = String(todayYmd).split("-").map(Number);
+    var y = p[0];
+    var m = p[1] - (monthOffset || 0);
+    while (m <= 0) { m += 12; y -= 1; }
+    while (m > 12) { m -= 12; y += 1; }
+    var last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    var d = Math.min(Math.max(1, day || 1), last);
+    return y + "-" + pad2(m) + "-" + pad2(d);
+  }
+
+  function monthKey(ymd) {
+    return String(ymd).slice(0, 7);
+  }
+
+  function shiftMonthKey(todayYmd, monthOffset) {
+    return monthKey(dateInMonth(todayYmd, monthOffset, 1));
+  }
+
+  /* Keep current + previous calendar month; anything before this cutoff is dropped. */
+  function retentionCutoff(todayYmd) {
+    return dateInMonth(todayYmd, 1, 1);
+  }
+
+  function isYmd(s) {
+    return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  }
+
+  function pruneOlderThan(entries, cutoffYmd) {
+    return (entries || []).filter(function (e) {
+      return e && isYmd(e.date) && e.date >= cutoffYmd;
+    });
+  }
+
   function last7Dates(todayYmd) {
     var dates = [];
     var p = todayYmd.split("-").map(Number);
     var cursor = new Date(Date.UTC(p[0], p[1] - 1, p[2]));
     for (var i = 0; i < 7; i++) {
-      var d = new Date(cursor.getTime() - i * 86400000);
-      var m = String(d.getUTCMonth() + 1).padStart(2, "0");
-      var day = String(d.getUTCDate()).padStart(2, "0");
-      dates.push(d.getUTCFullYear() + "-" + m + "-" + day);
+      dates.push(ymdFromUtc(new Date(cursor.getTime() - i * 86400000)));
     }
     return dates;
   }
 
-  function inDates(entry, dateSet) {
-    return !!dateSet[entry.date];
+  function uniqueDays(entries) {
+    var s = {};
+    (entries || []).forEach(function (e) { if (e && e.date) s[e.date] = true; });
+    return Object.keys(s).length;
   }
 
-  function summarize(entries, todayYmd) {
-    var dates = last7Dates(todayYmd);
-    var dateSet = {};
-    dates.forEach(function (d) { dateSet[d] = true; });
-    var week = entries.filter(function (e) { return inDates(e, dateSet); });
-    var expenses = week.filter(function (e) { return e.type === "expense"; });
-    var incomes = week.filter(function (e) { return e.type === "income"; });
-
+  function aggregate(list) {
+    var expenses = list.filter(function (e) { return e.type === "expense"; });
+    var incomes = list.filter(function (e) { return e.type === "income"; });
     var spent = 0, income = 0;
     expenses.forEach(function (e) { spent += e.total; });
     incomes.forEach(function (e) { income += e.total; });
 
     var cats = (root.MoneyNoteCategories || require("./categories")).CATEGORIES;
     var byCat = {};
-    cats.forEach(function (c) { byCat[c.id] = { id: c.id, name: c.name, total: 0, count: 0, color: c.color, essential: c.essential, discretionary: c.discretionary, items: [] }; });
+    cats.forEach(function (c) {
+      byCat[c.id] = { id: c.id, name: c.name, total: 0, count: 0, color: c.color, essential: c.essential, discretionary: c.discretionary, items: [] };
+    });
     expenses.forEach(function (e) {
       var id = e.category || "other";
       if (!byCat[id]) byCat[id] = { id: id, name: id, total: 0, count: 0, color: "#8A8178", essential: false, discretionary: false, items: [] };
@@ -73,8 +112,6 @@
       .sort(function (a, b) { return b.total - a.total || b.count - a.count; });
 
     return {
-      dates: dates,
-      week: week,
       expenses: expenses,
       incomes: incomes,
       spent: spent,
@@ -85,39 +122,71 @@
     };
   }
 
+  function summarize(entries, todayYmd) {
+    var dates = last7Dates(todayYmd);
+    var dateSet = {};
+    dates.forEach(function (d) { dateSet[d] = true; });
+    var week = (entries || []).filter(function (e) { return e && dateSet[e.date]; });
+    var out = aggregate(week);
+    out.dates = dates;
+    out.week = week;
+    return out;
+  }
+
+  function summarizeMonth(entries, yearMonth) {
+    var month = (entries || []).filter(function (e) {
+      return e && typeof e.date === "string" && e.date.slice(0, 7) === yearMonth;
+    });
+    var out = aggregate(month);
+    out.yearMonth = yearMonth;
+    out.dates = month.map(function (e) { return e.date; })
+      .filter(function (d, i, arr) { return arr.indexOf(d) === i; })
+      .sort();
+    return out;
+  }
+
   function isEssentialCat(catId, catsApi) {
     var c = catsApi.getCategory(catId);
     return !!(c && c.essential);
   }
 
-  function adviceFor(summary) {
+  /* opts.when e.g. "สัปดาห์นี้" / "เดือนพฤศจิกายน"
+     opts.range e.g. "ใน 7 วันนี้" / "ในเดือนพฤศจิกายน"
+     opts.empty e.g. "ในช่วง 7 วันที่ผ่านมา" / "ในเดือนพฤศจิกายน"
+     opts.foodThreshold, opts.frequentMin */
+  function adviceFor(summary, opts) {
+    opts = opts || {};
+    var when = opts.when || "สัปดาห์นี้";
+    var range = opts.range || "ใน 7 วันนี้";
+    var empty = opts.empty || "ในช่วง 7 วันที่ผ่านมา";
+    var foodThreshold = opts.foodThreshold != null ? opts.foodThreshold : 300;
+    var frequentMin = opts.frequentMin != null ? opts.frequentMin : 2;
     var lines = [];
-    var expenses = summary.expenses;
+    var expenses = summary.expenses || [];
     if (expenses.length === 0) {
-      lines.push("ยังไม่มีรายจ่ายในช่วง 7 วันที่ผ่านมา ลองบันทึกรายการดูสักสองสามวัน จะได้เห็นภาพภาพรวมได้ชัดขึ้น");
+      lines.push("ยังไม่มีรายจ่าย" + empty + " ลองบันทึกรายการดูสักสองสามวัน จะได้เห็นภาพรวมได้ชัดขึ้น");
       return lines;
     }
-    if (expenses.length < 3 || summary.dates && uniqueDays(expenses) < 3) {
-      lines.push("ข้อมูลยังน้อยไปอยู่ ตอนนี้มีรายจ่าย " + expenses.length + " รายการในสัปดาห์นี้ ลองบันทึกต่ออีกสักสองสามวัน จะแนะนำได้แม่นกว่านี้");
+    if (expenses.length < 3 || uniqueDays(expenses) < 3) {
+      lines.push("ข้อมูลยังน้อยไปอยู่ ตอนนี้มีรายจ่าย " + expenses.length + " รายการ" + range + " ลองบันทึกต่ออีกสักสองสามวัน จะแนะนำได้แม่นกว่านี้");
     }
 
     var biggest = summary.catList[0];
     if (biggest) {
       if (biggest.essential) {
-        lines.push("หมวดที่ใช้เยอะสุดสัปดาห์นี้คือ" + biggest.name + " " + baht(biggest.total) + " ซึ่งเป็นค่าใช้จ่ายจำเป็น จึงไม่แนะนำให้ตัดส่วนนี้");
+        lines.push("หมวดที่ใช้เยอะสุด" + when + "คือ" + biggest.name + " " + baht(biggest.total) + " ซึ่งเป็นค่าใช้จ่ายจำเป็น จึงไม่แนะนำให้ตัดส่วนนี้");
       } else {
-        lines.push("หมวดที่ใช้เยอะสุดสัปดาห์นี้คือ" + biggest.name + " " + baht(biggest.total));
+        lines.push("หมวดที่ใช้เยอะสุด" + when + "คือ" + biggest.name + " " + baht(biggest.total));
       }
     }
 
-    var disc = summary.catList.filter(function (c) { return c.discretionary && c.total > 0; });
+    var disc = (summary.catList || []).filter(function (c) { return c.discretionary && c.total > 0; });
     if (disc.length) {
       var topDisc = disc[0];
       var save = Math.round((topDisc.total / 2) * 100) / 100;
       if (save >= 20) {
-        lines.push("ถ้าลดค่า" + topDisc.name + "ลงครึ่งหนึ่ง จะประหยัดได้ประมาณ " + baht(save) + " ใน 7 วันนี้");
+        lines.push("ถ้าลดค่า" + topDisc.name + "ลงครึ่งหนึ่ง จะประหยัดได้ประมาณ " + baht(save) + " " + range);
       }
-      // mention other discretionary if meaningful
       for (var i = 1; i < disc.length && i < 3; i++) {
         if (disc[i].total >= 80) {
           var s2 = Math.round((disc[i].total / 2) * 100) / 100;
@@ -126,20 +195,18 @@
       }
     }
 
-    // Frequent small non-essential purchases
     var catsApi = root.MoneyNoteCategories || require("./categories");
-    var frequent = summary.topItems.filter(function (it) {
-      return it.count >= 2 && it.total / it.count <= 100 && !isEssentialCat(it.category, catsApi);
+    var frequent = (summary.topItems || []).filter(function (it) {
+      return it.count >= frequentMin && it.total / it.count <= 100 && !isEssentialCat(it.category, catsApi);
     }).sort(function (a, b) { return b.count - a.count || b.total - a.total; });
     if (frequent.length) {
       var f = frequent[0];
-      lines.push("สัปดาห์นี้ซื้อ\"" + f.name + "\" บ่อย (" + f.count + " ครั้ง รวม " + baht(f.total) + ") ลองตัดบางครั้งออกได้ ถ้าไม่จำเป็น");
+      lines.push(when + "ซื้อ\"" + f.name + "\" บ่อย (" + f.count + " ครั้ง รวม " + baht(f.total) + ") ลองตัดบางครั้งออกได้ ถ้าไม่จำเป็น");
     }
 
-    // Food is mixed essential/discretionary — only hint if it's clearly large
-    var food = summary.catList.filter(function (c) { return c.id === "food"; })[0];
-    if (food && food.total >= 300) {
-      lines.push("ค่าอาหารสัปดาห์นี้ " + baht(food.total) + " ไม่ได้แนะนำให้ตัดมื้อหลัก แต่ถ้ามีสั่งเดลิเวอรี่หรือขนมบ่อย ลดบางมื้อจะช่วยได้");
+    var food = (summary.catList || []).filter(function (c) { return c.id === "food"; })[0];
+    if (food && food.total >= foodThreshold) {
+      lines.push("ค่าอาหาร" + when + " " + baht(food.total) + " ไม่ได้แนะนำให้ตัดมื้อหลัก แต่ถ้ามีสั่งเดลิเวอรี่หรือขนมบ่อย ลดบางมื้อจะช่วยได้");
     }
 
     if (lines.length === 0 || (lines.length === 1 && lines[0].indexOf("ข้อมูลยังน้อย") !== -1)) {
@@ -150,16 +217,17 @@
     return lines;
   }
 
-  function uniqueDays(entries) {
-    var s = {};
-    entries.forEach(function (e) { s[e.date] = true; });
-    return Object.keys(s).length;
-  }
-
   return {
     baht: baht,
+    dateInMonth: dateInMonth,
+    monthKey: monthKey,
+    shiftMonthKey: shiftMonthKey,
+    retentionCutoff: retentionCutoff,
+    pruneOlderThan: pruneOlderThan,
     last7Dates: last7Dates,
     summarize: summarize,
-    adviceFor: adviceFor
+    summarizeMonth: summarizeMonth,
+    adviceFor: adviceFor,
+    uniqueDays: uniqueDays
   };
 });

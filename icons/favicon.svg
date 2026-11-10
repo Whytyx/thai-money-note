@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A735E"/>
+      <stop offset="1" stop-color="#174538"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0.2" y2="1">
+      <stop offset="0" stop-color="#FFFEFB"/>
+      <stop offset="0.7" stop-color="#F7F1E7"/>
+      <stop offset="1" stop-color="#EFE6D8"/>
+    </linearGradient>
+    <linearGradient id="spine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#C9B89A"/>
+      <stop offset="0.35" stop-color="#E2D3BB"/>
+      <stop offset="1" stop-color="#D4C3A8"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#D7C8B0"/>
+      <stop offset="1" stop-color="#C4B394"/>
+    </linearGradient>
+    <radialGradient id="coin" cx="0.34" cy="0.30" r="0.78">
+      <stop offset="0" stop-color="#F9E9B0"/>
+      <stop offset="0.45" stop-color="#E8C25A"/>
+      <stop offset="1" stop-color="#B88620"/>
+    </radialGradient>
+    <radialGradient id="coinInner" cx="0.38" cy="0.34" r="0.7">
+      <stop offset="0" stop-color="#F3DC8A"/>
+      <stop offset="1" stop-color="#D4A83A"/>
+    </radialGradient>
+    <filter id="soft" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0A1F18" flood-opacity="0.32"/>
+    </filter>
+    <filter id="coinSh" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="3" dy="10" stdDeviation="9" flood-color="#0A1F18" flood-opacity="0.38"/>
+    </filter>
+    <clipPath id="roundSq">
+      <rect width="512" height="512" rx="114" ry="114"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#roundSq)">
+    <rect width="512" height="512" fill="url(#bg)"/>
+    <rect x="108" y="88" width="250" height="344" rx="30" fill="url(#paper)"/>
+    <rect x="108" y="88" width="44" height="344" rx="0" fill="url(#spine)"/>
+    <!-- cover the spine's right angles at the ends by reusing paper? keep simple -->
+    <path d="M108 118C108 100 122 88 140 88H152V432H140C122 432 108 420 108 402Z" fill="url(#spine)"/>
+    <g stroke="#D0C3AE" stroke-width="10" stroke-linecap="round">
+      <line x1="178" y1="170" x2="328" y2="170"/>
+      <line x1="178" y1="220" x2="328" y2="220"/>
+      <line x1="178" y1="270" x2="300" y2="270"/>
+    </g>
+    <circle cx="352" cy="352" r="128" fill="url(#coin)"/>
+    <circle cx="352" cy="352" r="114" fill="none" stroke="#F6E7B0" stroke-width="8"/>
+    <path d="M351 0V-79H241V0H68V700H241V769H351V697Q445 687 493.5 643.5Q542 600 542 525Q542 475 519.0 439.0Q496 403 447 378V375Q511 351 539.5 311.0Q568 271 568 206Q568 109 512.5 56.0Q457 3 351 0ZM212 421H308Q350 421 373.5 444.5Q397 468 397 510Q397 551 370.5 570.0Q344 589 289 589H212ZM426 215Q426 268 395.0 292.0Q364 316 295 316H212V111H328Q375 111 400.5 138.0Q426 165 426 215Z" transform="translate(352,356) scale(0.181132,-0.181132) translate(-318.0,-345.0)" fill="#1F5C4A"/>
+  </g>
+</svg>

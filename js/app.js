@@ -12,7 +12,8 @@
     overrides: {},
     preview: [],
     editingId: null,
-    categoryFor: null
+    categoryFor: null,
+    monthOffset: 0
   };
 
   function $(id) { return document.getElementById(id); }
@@ -75,40 +76,79 @@
     localStorage.setItem(STORAGE_ENTRIES, JSON.stringify(state.entries));
   }
 
+  function thaiMonthName(yearMonth) {
+    var months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+      "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+    var p = yearMonth.split("-").map(Number);
+    return months[p[1] - 1] + " " + (p[0] + 543);
+  }
+
   function buildDemo(today) {
     var recipes = [
-      [0, "ข้าวมันไก่ 50"],
-      [0, "กาแฟ 2 แก้ว แก้วละ 45"],
-      [0, "ซื้อน้ำ 3 ขวด 30"],
-      [1, "ข้าวผัดกะเพรา 65"],
-      [1, "ลาเต้ 55"],
-      [1, "BTS 46"],
-      [1, "ขายได้ 800"],
-      [2, "ตั๋วหนัง 280"],
-      [2, "ป๊อปคอร์น 89"],
-      [2, "ชานมไข่มุก 65"],
-      [3, "ชานมไข่มุก 65"],
-      [3, "กาแฟ 45"],
-      [3, "เสื้อยืด 390"],
-      [4, "ค่าเน็ต 599"],
-      [4, "ข้าวกล่อง 60"],
-      [5, "ยาพาราเซตามอล 35"],
-      [5, "ส้มตำ 80"],
-      [5, "กาแฟ 50"],
-      [6, "ค่าน้ำมัน 500"],
-      [6, "ข้าวมันไก่ 50"],
-      [6, "ชาเขียว 45"]
+      { ago: 0, text: "ข้าวมันไก่ 50" },
+      { ago: 0, text: "กาแฟ 2 แก้ว แก้วละ 45" },
+      { ago: 0, text: "ซื้อน้ำ 3 ขวด 30" },
+      { ago: 1, text: "ข้าวผัดกะเพรา 65" },
+      { ago: 1, text: "ลาเต้ 55" },
+      { ago: 1, text: "BTS 46" },
+      { ago: 1, text: "ขายได้ 800" },
+      { ago: 2, text: "ตั๋วหนัง 280" },
+      { ago: 2, text: "ป๊อปคอร์น 89" },
+      { ago: 2, text: "ชานมไข่มุก 65" },
+      { ago: 3, text: "ชานมไข่มุก 65" },
+      { ago: 3, text: "กาแฟ 45" },
+      { ago: 3, text: "เสื้อยืด 390" },
+      { ago: 4, text: "ค่าเน็ต 599" },
+      { ago: 4, text: "ข้าวกล่อง 60" },
+      { ago: 5, text: "ยาพาราเซตามอล 35" },
+      { ago: 5, text: "ส้มตำ 80" },
+      { ago: 5, text: "กาแฟ 50" },
+      { ago: 6, text: "ค่าน้ำมัน 500" },
+      { ago: 6, text: "ข้าวมันไก่ 50" },
+      { ago: 6, text: "ชาเขียว 45" },
+      /* earlier in the current month, so สรุปเดือน has more than 7 days */
+      { monthOffset: 0, day: 1, text: "เงินเดือน 25000" },
+      { monthOffset: 0, day: 1, text: "ค่าเช่า 6500" },
+      { monthOffset: 0, day: 2, text: "ข้าวผัด 60" },
+      { monthOffset: 0, day: 2, text: "กาแฟ 45" },
+      { monthOffset: 0, day: 3, text: "เติมน้ำมัน 600" },
+      /* previous calendar month */
+      { monthOffset: 1, day: 1, text: "เงินเดือน 25000" },
+      { monthOffset: 1, day: 1, text: "ค่าเช่า 6500" },
+      { monthOffset: 1, day: 2, text: "ค่าไฟ 1280" },
+      { monthOffset: 1, day: 5, text: "เสื้อ 890" },
+      { monthOffset: 1, day: 8, text: "ตั๋วหนัง 280" },
+      { monthOffset: 1, day: 8, text: "กาแฟ 50" },
+      { monthOffset: 1, day: 12, text: "ค่าน้ำมัน 500" },
+      { monthOffset: 1, day: 12, text: "ข้าวกล่อง 60" },
+      { monthOffset: 1, day: 15, text: "ชานมไข่มุก 65" },
+      { monthOffset: 1, day: 15, text: "กาแฟ 45" },
+      { monthOffset: 1, day: 20, text: "บุฟเฟต์ 499" },
+      { monthOffset: 1, day: 25, text: "BTS 46" },
+      { monthOffset: 1, day: 25, text: "ส้มตำ 80" },
+      { monthOffset: 1, day: 28, text: "ชานมไข่มุก 65" }
     ];
-    var dates = MoneyNoteAdvice.last7Dates(today);
+    var weekDates = MoneyNoteAdvice.last7Dates(today);
+    var weekSet = {};
+    weekDates.forEach(function (d) { weekSet[d] = true; });
     var out = [];
     recipes.forEach(function (row, i) {
-      var parsed = MoneyNoteParser.parseItems(row[1])[0];
+      var parsed = MoneyNoteParser.parseItems(row.text)[0];
       if (!parsed) return;
+      var date;
+      if (row.ago != null) {
+        date = weekDates[row.ago];
+      } else {
+        date = MoneyNoteAdvice.dateInMonth(today, row.monthOffset, row.day);
+        /* don't double-count if that calendar day already sits in the last 7 */
+        if (weekSet[date]) return;
+      }
+      if (!date) return;
       out.push({
         id: "demo-" + i,
-        date: dates[row[0]],
-        createdAt: dates[row[0]] + "T12:00:00+07:00",
-        raw: row[1],
+        date: date,
+        createdAt: date + "T12:00:00+07:00",
+        raw: row.text,
         name: parsed.name,
         qty: parsed.qty,
         unit: parsed.unit,
@@ -120,6 +160,17 @@
       });
     });
     return out;
+  }
+
+  function persistPruned(today) {
+    var stored = loadEntries();
+    var cutoff = MoneyNoteAdvice.retentionCutoff(today);
+    var pruned = MoneyNoteAdvice.pruneOlderThan(stored, cutoff);
+    if (pruned.length !== stored.length) {
+      try { localStorage.setItem(STORAGE_ENTRIES, JSON.stringify(pruned)); }
+      catch (err) {}
+    }
+    return pruned;
   }
 
   function parsedToEntry(parsed, date) {
@@ -249,8 +300,71 @@
       top.innerHTML = "<h3>รายการที่ใช้เยอะ</h3><ul class='top-list'>" + items + "</ul>";
     }
 
-    var advice = MoneyNoteAdvice.adviceFor(summary);
+    var advice = MoneyNoteAdvice.adviceFor(summary, {
+      when: "สัปดาห์นี้",
+      range: "ใน 7 วันนี้",
+      empty: "ในช่วง 7 วันที่ผ่านมา",
+      foodThreshold: 300,
+      frequentMin: 2
+    });
     $("week-advice").innerHTML = "<h3>มองย้อนสัปดาห์นี้</h3>" +
+      advice.map(function (line) { return "<p>" + esc(line) + "</p>"; }).join("");
+  }
+
+  function monthAdviceOpts(yearMonth, today) {
+    var name = thaiMonthName(yearMonth);
+    var current = MoneyNoteAdvice.shiftMonthKey(today, 0) === yearMonth;
+    var when = current ? "เดือนนี้" : "เดือน" + name.split(" ")[0];
+    var range = current ? "ในเดือนนี้" : "ในเดือน" + name.split(" ")[0];
+    return {
+      when: when,
+      range: range,
+      empty: range,
+      foodThreshold: 800,
+      frequentMin: 3
+    };
+  }
+
+  function renderMonth() {
+    var today = bangkokToday();
+    var yearMonth = MoneyNoteAdvice.shiftMonthKey(today, state.monthOffset);
+    var summary = MoneyNoteAdvice.summarizeMonth(state.entries, yearMonth);
+    $("month-title").textContent = thaiMonthName(yearMonth);
+    $("month-prev").disabled = state.monthOffset >= 1;
+    $("month-next").disabled = state.monthOffset <= 0;
+    $("month-spent").textContent = baht(summary.spent);
+    $("month-income").textContent = baht(summary.income);
+    $("month-net").textContent = baht(summary.net);
+    $("month-net").className = "num " + (summary.net >= 0 ? "income" : "net-neg");
+
+    var max = summary.catList.length ? summary.catList[0].total : 0;
+    var bars = $("month-bars");
+    if (!summary.catList.length) {
+      bars.innerHTML = '<p class="empty">ยังไม่มีรายจ่ายในเดือนนี้</p>';
+    } else {
+      bars.innerHTML = summary.catList.map(function (c) {
+        var pct = max ? Math.max(6, Math.round((c.total / max) * 100)) : 0;
+        return '<div class="bar-row">' +
+          '<span class="bar-label">' + esc(c.name) + '</span>' +
+          '<div class="bar-track"><div class="bar-fill" style="width:' + pct + "%;background:" + c.color + '"></div></div>' +
+          '<span class="bar-amt">' + baht(c.total) + "</span>" +
+        "</div>";
+      }).join("");
+    }
+
+    var top = $("month-top");
+    if (!summary.topItems.length) {
+      top.innerHTML = "";
+    } else {
+      var items = summary.topItems.slice(0, 5).map(function (it) {
+        return "<li><span>" + esc(it.name) + (it.count > 1 ? " × " + it.count : "") +
+          "</span><strong>" + baht(it.total) + "</strong></li>";
+      }).join("");
+      top.innerHTML = "<h3>หมวดและรายการที่ใช้เยอะ</h3><ul class='top-list'>" + items + "</ul>";
+    }
+
+    var advice = MoneyNoteAdvice.adviceFor(summary, monthAdviceOpts(yearMonth, today));
+    $("month-advice").innerHTML = "<h3>มองย้อนทั้งเดือน</h3>" +
       advice.map(function (line) { return "<p>" + esc(line) + "</p>"; }).join("");
   }
 
@@ -268,6 +382,7 @@
     renderPreview();
     renderToday();
     renderWeek();
+    renderMonth();
   }
 
   function updatePreviewFromInput() {
@@ -446,12 +561,34 @@
   }
 
   function setTab(tab) {
+    if (tab !== "today" && tab !== "week" && tab !== "month") tab = "today";
     state.tab = tab;
     document.body.setAttribute("data-tab", tab);
-    $("tab-today").classList.toggle("on", tab === "today");
-    $("tab-week").classList.toggle("on", tab === "week");
-    $("tab-today").setAttribute("aria-selected", tab === "today" ? "true" : "false");
-    $("tab-week").setAttribute("aria-selected", tab === "week" ? "true" : "false");
+    ["today", "week", "month"].forEach(function (id) {
+      var el = $("tab-" + id);
+      if (el) {
+        el.classList.toggle("on", tab === id);
+        el.setAttribute("aria-selected", tab === id ? "true" : "false");
+      }
+    });
+    var sideWeek = $("side-tab-week");
+    var sideMonth = $("side-tab-month");
+    var weekOn = tab === "week" || tab === "today";
+    if (sideWeek) {
+      sideWeek.classList.toggle("on", weekOn);
+      sideWeek.setAttribute("aria-selected", weekOn ? "true" : "false");
+    }
+    if (sideMonth) {
+      sideMonth.classList.toggle("on", tab === "month");
+      sideMonth.setAttribute("aria-selected", tab === "month" ? "true" : "false");
+    }
+  }
+
+  function shiftMonth(dir) {
+    var next = state.monthOffset + dir;
+    if (next < 0 || next > 1) return;
+    state.monthOffset = next;
+    renderMonth();
   }
 
   function onClick(e) {
@@ -469,6 +606,8 @@
       location.href = url.pathname + url.search + url.hash;
       return;
     }
+    if (t.id === "month-prev") { shiftMonth(1); return; }
+    if (t.id === "month-next") { shiftMonth(-1); return; }
     if (t.getAttribute("data-tab")) { setTab(t.getAttribute("data-tab")); return; }
     if (t.getAttribute("data-edit")) { openEditor(t.getAttribute("data-edit")); return; }
     if (t.getAttribute("data-del")) { deleteEntry(t.getAttribute("data-del")); return; }
@@ -485,12 +624,15 @@
     var params = new URLSearchParams(location.search);
     state.demo = params.has("demo");
     state.overrides = loadOverrides();
+    var today = bangkokToday();
+    var pruned = persistPruned(today);
     if (state.demo) {
-      state.entries = buildDemo(bangkokToday());
+      state.entries = buildDemo(today);
     } else {
-      state.entries = loadEntries();
+      state.entries = pruned;
     }
     if (params.get("tab") === "week") setTab("week");
+    else if (params.get("tab") === "month") setTab("month");
     else setTab("today");
 
     $("composer").addEventListener("input", updatePreviewFromInput);

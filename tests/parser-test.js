@@ -156,5 +156,51 @@ cases.forEach(function (tc) {
 });
 
 console.log(details.join("\n"));
-console.log("\n" + passed + " passed, " + failed + " failed, " + cases.length + " total");
+
+// --- month / retention helpers ---
+var advice = require("../js/advice");
+var extra = [];
+function check(title, cond, detail) {
+  if (cond) { extra.push("PASS  " + title); passed++; }
+  else { extra.push("FAIL  " + title + (detail ? "\n      " + detail : "")); failed++; }
+}
+
+check("retentionCutoff mid-November is 1 Oct", advice.retentionCutoff("2026-11-10") === "2026-10-01", advice.retentionCutoff("2026-11-10"));
+check("retentionCutoff mid-January wraps to 1 Dec previous year", advice.retentionCutoff("2026-01-15") === "2025-12-01", advice.retentionCutoff("2026-01-15"));
+check("dateInMonth previous month day 5", advice.dateInMonth("2026-11-10", 1, 5) === "2026-10-05");
+check("dateInMonth clamps 31 in February", advice.dateInMonth("2026-03-10", 1, 31) === "2026-02-28");
+check("shiftMonthKey 0 is current month", advice.shiftMonthKey("2026-11-10", 0) === "2026-11");
+check("shiftMonthKey 1 is previous month", advice.shiftMonthKey("2026-11-10", 1) === "2026-10");
+
+var pruned = advice.pruneOlderThan([
+  { date: "2026-09-30", total: 1 },
+  { date: "2026-10-01", total: 2 },
+  { date: "2026-11-10", total: 3 },
+  { date: "bad" },
+  { date: "2025-12-01", total: 4 }
+], "2026-10-01");
+check("prune keeps current + previous month only", pruned.length === 2 && pruned[0].date === "2026-10-01" && pruned[1].date === "2026-11-10", JSON.stringify(pruned));
+
+var monthEntries = [
+  { date: "2026-11-01", type: "income", name: "เงินเดือน", total: 25000, category: "other" },
+  { date: "2026-11-01", type: "expense", name: "ค่าเช่า", total: 6500, category: "bills" },
+  { date: "2026-11-10", type: "expense", name: "กาแฟ", total: 90, category: "drink" },
+  { date: "2026-10-05", type: "expense", name: "เสื้อ", total: 890, category: "shopping" }
+];
+var nov = advice.summarizeMonth(monthEntries, "2026-11");
+check("summarizeMonth income", nov.income === 25000);
+check("summarizeMonth spent excludes other months", nov.spent === 6590, "spent=" + nov.spent);
+check("summarizeMonth net", nov.net === 25000 - 6590);
+check("summarizeMonth top category is bills", nov.catList[0] && nov.catList[0].id === "bills");
+
+var oct = advice.summarizeMonth(monthEntries, "2026-10");
+check("summarizeMonth October only has shopping", oct.spent === 890 && oct.income === 0);
+
+var monthAdvice = advice.adviceFor(nov, { when: "เดือนนี้", range: "ในเดือนนี้", empty: "ในเดือนนี้", foodThreshold: 800, frequentMin: 3 });
+var joined = monthAdvice.join(" | ");
+check("monthly advice mentions bills as essential", /บิล/.test(joined) && /จำเป็น/.test(joined), joined);
+check("monthly advice offers cutting drinks", /เครื่องดื่ม/.test(joined), joined);
+
+console.log("\n" + extra.join("\n"));
+console.log("\n" + passed + " passed, " + failed + " failed (including month/retention)");
 process.exit(failed ? 1 : 0);

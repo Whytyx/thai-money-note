@@ -4,13 +4,16 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>โน้ตเงิน — รายรับรายจ่าย</title>
-  <meta name="description" content="พิมพ์รายรับรายจ่ายภาษาไทยได้เลย แยกหมวดให้อัตโนมัติ สรุปรายวันและรายสัปดาห์ ข้อมูลเก็บในเครื่องนี้เท่านั้น">
+  <meta name="description" content="พิมพ์รายรับรายจ่ายภาษาไทยได้เลย แยกหมวดให้อัตโนมัติ สรุปรายวัน รายสัปดาห์ และรายเดือน ข้อมูลเก็บในเครื่องนี้เท่านั้น">
   <meta name="theme-color" content="#f3efe6">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="โน้ตเงิน">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon-192.png" type="image/png">
-  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/favicon-32.png" type="image/png" sizes="32x32">
+  <link rel="icon" href="icons/favicon-16.png" type="image/png" sizes="16x16">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" sizes="180x180">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body data-tab="today">
@@ -25,6 +28,7 @@
     <nav class="tabs" role="tablist" aria-label="มุมมอง">
       <button type="button" id="tab-today" class="on" data-tab="today" role="tab" aria-selected="true">วันนี้</button>
       <button type="button" id="tab-week" data-tab="week" role="tab" aria-selected="false">สัปดาห์</button>
+      <button type="button" id="tab-month" data-tab="month" role="tab" aria-selected="false">เดือน</button>
     </nav>
   </header>
 
@@ -62,7 +66,14 @@
         </div>
       </div>
       <div id="today-list"></div>
+      <p class="fineprint retain-note">รายการเก่ากว่า 2 เดือนจะถูกลบอัตโนมัติ คงไว้เฉพาะเดือนนี้กับเดือนก่อน</p>
     </section>
+
+    <div id="summary-col">
+    <div class="side-tabs" role="tablist" aria-label="สรุป">
+      <button type="button" id="side-tab-week" class="on" data-tab="week" role="tab" aria-selected="true">สัปดาห์</button>
+      <button type="button" id="side-tab-month" data-tab="month" role="tab" aria-selected="false">เดือน</button>
+    </div>
 
     <section class="panel" id="week-panel" aria-labelledby="week-title">
       <h2 class="section-title" id="week-title">7 วันล่าสุด</h2>
@@ -85,12 +96,45 @@
       <div id="week-bars"></div>
       <div id="week-advice"></div>
       <div id="week-top"></div>
+    </section>
+
+    <section class="panel" id="month-panel" aria-labelledby="month-title">
+      <div class="month-nav">
+        <button type="button" id="month-prev" aria-label="เดือนก่อนหน้า">‹</button>
+        <div class="month-nav-label">
+          <h2 class="section-title" id="month-title">เดือนนี้</h2>
+          <p class="sub" id="month-label">สรุป 1 เดือน</p>
+        </div>
+        <button type="button" id="month-next" aria-label="เดือนถัดไป">›</button>
+      </div>
+      <div class="totals">
+        <div class="total-box">
+          <span class="lbl">รายจ่าย</span>
+          <span class="num" id="month-spent">฿0</span>
+        </div>
+        <div class="total-box">
+          <span class="lbl">รายรับ</span>
+          <span class="num income" id="month-income">฿0</span>
+        </div>
+        <div class="total-box">
+          <span class="lbl">คงเหลือ</span>
+          <span class="num" id="month-net">฿0</span>
+        </div>
+      </div>
+      <h3>แยกตามหมวด</h3>
+      <div id="month-bars"></div>
+      <div id="month-advice"></div>
+      <div id="month-top"></div>
+    </section>
+
+    <div class="panel" id="tools-panel">
       <div class="tools">
         <button type="button" id="export-btn">ส่งออก CSV</button>
         <button type="button" id="clear-btn" class="danger">ล้างข้อมูล</button>
       </div>
-      <p class="fineprint">ข้อมูลเก็บในเครื่องนี้เท่านั้น ไม่ส่งไปเซิร์ฟเวอร์ ใช้ออฟไลน์ได้</p>
-    </section>
+      <p class="fineprint">ข้อมูลเก็บในเครื่องนี้เท่านั้น ไม่ส่งไปเซิร์ฟเวอร์ ใช้ออฟไลน์ได้<br>รายการเก่ากว่า 2 เดือนจะถูกลบอัตโนมัติ คงไว้เฉพาะเดือนนี้กับเดือนก่อน</p>
+    </div>
+    </div>
   </main>
 
   <div id="edit-modal" class="modal" hidden>

@@ -79,9 +79,11 @@ p { margin: 0; }
   min-width: 0;
 }
 .brand img {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  box-shadow: 0 1px 3px rgba(28, 25, 22, 0.16);
+  flex-shrink: 0;
 }
 .brand h1 {
   font-size: 1.15rem;
@@ -98,21 +100,57 @@ p { margin: 0; }
   border-radius: 999px;
   padding: 3px;
 }
-.tabs button {
+.tabs button, .side-tabs button {
   border: 0;
   background: transparent;
-  padding: 8px 14px;
+  padding: 8px 12px;
   min-height: 40px;
   border-radius: 999px;
   color: var(--muted);
   cursor: pointer;
+  flex: 1;
 }
-.tabs button.on {
+.tabs button.on, .side-tabs button.on {
   background: var(--paper);
   color: var(--ink);
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(28, 25, 22, 0.08);
 }
+
+.side-tabs {
+  display: none;
+  background: #e9e3d8;
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.month-nav {
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.month-nav-label { text-align: center; }
+.month-nav-label .sub { margin-bottom: 0; }
+.month-nav button {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 12px;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink);
+}
+.month-nav button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+#tools-panel .tools { margin-top: 0; }
+#tools-panel { padding-top: 14px; padding-bottom: 14px; }
 
 .demo-banner {
   margin: 10px 16px 0;
@@ -352,7 +390,7 @@ p { margin: 0; }
   padding: 8px 0;
   border-top: 1px solid var(--line);
 }
-#week-top, #week-advice { margin-top: 14px; }
+#week-top, #week-advice, #month-top, #month-advice { margin-top: 14px; }
 #week-advice p { margin-top: 8px; color: #3a342e; }
 
 .tools {
@@ -463,12 +501,23 @@ p { margin: 0; }
   color: var(--muted);
   text-align: center;
 }
+#today-panel .retain-note { margin-top: 14px; margin-bottom: 0; }
 
 /* Mobile: one pane at a time */
 @media (max-width: 879px) {
-  body[data-tab="today"] #week-panel { display: none; }
+  .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .tabs { width: 100%; }
+  body[data-tab="today"] #summary-col { display: none; }
   body[data-tab="week"] #today-panel,
-  body[data-tab="week"] .composer { display: none; }
+  body[data-tab="week"] .composer,
+  body[data-tab="week"] #month-panel { display: none; }
+  body[data-tab="month"] #today-panel,
+  body[data-tab="month"] .composer,
+  body[data-tab="month"] #week-panel { display: none; }
 }
 
 @media (min-width: 880px) {
@@ -478,8 +527,17 @@ p { margin: 0; }
     padding-top: 24px;
   }
   .composer, #today-panel { grid-column: 1; }
-  #week-panel { grid-column: 2; grid-row: 1 / span 3; }
+  #summary-col {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
   .tabs { display: none; }
+  .side-tabs { display: flex; }
+  body[data-tab="month"] #week-panel { display: none; }
+  body:not([data-tab="month"]) #month-panel { display: none; }
   .modal { align-items: center; }
   .sheet { border-radius: 20px; margin-bottom: 0; }
 }
